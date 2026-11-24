@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import risco, situacao %}
+{% block titulo %}Pacientes{% endblock %}
+{% block subtitulo %}Cadastre e consulte pacientes{% endblock %}
+{% block conteudo %}
+<div class="grid g-form">
+  <section class="card">
+    <h2>Novo paciente</h2>
+    <p class="sub" style="margin-bottom:16px">O número do paciente é gerado automaticamente.</p>
+    <form class="form" method="post" action="{{ url_for('cadastrar_paciente') }}" autocomplete="off">
+      <div class="field"><label for="nome">Nome do paciente</label>
+        <input id="nome" name="nome" required maxlength="80" placeholder="Ex.: Maria da Silva" autofocus></div>
+      <div class="field"><span class="lbl">Classificação de risco</span>
+        <div class="risk-picker">
+          {% for i in range(1, 6) %}
+          <label class="rc{{ i }}"><input type="radio" name="prioridade" value="{{ i }}"{% if i == 3 %} checked{% endif %}><span><i></i>{{ RISCOS[i] }}<small>{{ TEMPO_ALVO[i] }}</small></span></label>
+          {% endfor %}
+        </div>
+      </div>
+      <details class="more"><summary>Alterar horário de chegada</summary>
+        <div class="field"><input name="chegada" type="datetime-local" value="{{ agora_campo }}" aria-label="Horário de chegada">
+          <span class="help">Por padrão, o horário atual.</span></div>
+      </details>
+      <button class="btn" type="submit">Cadastrar paciente</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Lista de pacientes</h2>
+      <div class="chips">
+        {% for f in ['Todos', 'Aguardando', 'Em atendimento'] %}
+        <a class="chip{{ ' on' if f == filtro }}" href="{{ url_for('pacientes', filtro=f) }}">{{ f }}</a>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Nº</th><th>Nome</th><th>Risco</th><th>Situação</th><th>Chegada</th><th>Médico</th></tr></thead>
+      <tbody>
+        {% for p in lista %}
+        <tr><td class="id">{{ p.id }}</td><td><a class="rowlink" href="{{ url_for('ver_paciente', pid=p.id) }}">{{ p.nome }}</a></td>
+          <td>{{ risco(p.prioridade) }}</td><td>{{ situacao(p.situacao) }}</td><td class="tnum">{{ p.chegada|datahora }}</td>
+          <td>{{ s.medico(p.medico_id).nome if p.medico_id else '—' }}</td></tr>
+        {% else %}
+        <tr><td colspan="6" class="empty">Nenhum paciente {{ 'aguardando ou em atendimento' if filtro == 'Todos' else 'nesta situação' }}.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="sub" style="margin-top:12px">Clique no nome de um paciente para ver detalhes. Pacientes já atendidos ou cancelados saem desta lista e ficam no <a href="{{ url_for('historico') }}">Histórico</a>.</p>
+  </section>
+</div>
+{% endblock %}
