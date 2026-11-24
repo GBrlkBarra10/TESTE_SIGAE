@@ -1,0 +1,68 @@
+{% macro risco(n) -%}
+<span class="risk rc{{ n }}"><i></i>{{ RISCOS[n] }}</span>
+{%- endmacro %}
+
+{% macro situacao(st, curto=False) -%}
+{%- if st == 'Aguardando' %}{% set cls = 'st-wait' %}
+{%- elif st == 'Em atendimento' %}{% set cls = 'st-serv' %}
+{%- elif st == 'Concluído' %}{% set cls = 'st-done' %}
+{%- elif st == 'Disponível' %}{% set cls = 'st-avail' %}
+{%- else %}{% set cls = 'st-cancel' %}{% endif -%}
+<span class="status {{ cls }}">{{ 'Atendendo' if curto and st == 'Em atendimento' else st }}</span>
+{%- endmacro %}
+
+{% macro seletor_risco(p, voltar) -%}
+<form method="post" action="{{ url_for('reclassificar', pid=p.id) }}" class="inline">
+  <input type="hidden" name="voltar" value="{{ voltar }}">
+  <select name="prioridade" class="risk-select rc{{ p.prioridade }}" onchange="this.form.submit()" aria-label="Classificação de risco de {{ p.nome }}">
+    {% for i in range(1, 6) %}<option value="{{ i }}"{% if i == p.prioridade %} selected{% endif %}>{{ RISCOS[i] }}</option>{% endfor %}
+  </select>
+  <noscript><button class="btn light small">Salvar</button></noscript>
+</form>
+{%- endmacro %}
+
+{% macro proxima_chamada(p, m, voltar) -%}
+<section class="card hero">
+  <div class="next-call">
+    {% if p %}
+    <div class="slot"><div class="k">Próximo paciente</div><div class="n">{{ p.nome }}</div>
+      <div class="m">{{ risco(p.prioridade) }}<span>esperando há {{ p.chegada|desde }}</span></div></div>
+    {% else %}
+    <div class="slot"><div class="k">Próximo paciente</div><div class="n">Ninguém na fila</div>
+      <div class="m">Cadastre um paciente para começar</div></div>
+    {% endif %}
+    <div class="arrow">→</div>
+    {% if m %}
+    <div class="slot"><div class="k">Será atendido por</div><div class="n">{{ m.nome }}</div>
+      <div class="m"><span>{{ m.concluidos }} atendimento(s) concluído(s)</span></div></div>
+    {% else %}
+    <div class="slot warn"><div class="k">Será atendido por</div><div class="n">Nenhum médico livre</div>
+      <div class="m">O paciente aguarda na fila até um médico ficar livre</div></div>
+    {% endif %}
+    <form method="post" action="{{ url_for('chamar') }}">
+      <input type="hidden" name="voltar" value="{{ voltar }}">
+      <button class="btn big" {% if not (p and m) %}disabled{% endif %}>Chamar próximo</button>
+    </form>
+  </div>
+</section>
+{%- endmacro %}
+
+{% macro cartao_atendimento(a, voltar) -%}
+{%- set p = s.paciente(a.paciente_id) -%}{%- set m = s.medico(a.medico_id) -%}
+<article class="att rc{{ p.prioridade }}">
+  <div class="row"><a class="who" href="{{ url_for('ver_paciente', pid=p.id) }}">{{ p.nome }}</a>{{ risco(p.prioridade) }}</div>
+  <div class="doc">com <b>{{ m.nome }}</b></div>
+  <div class="row sub"><span>Início às {{ a.inicio|hora }}</span><span class="timer">{{ a.inicio|desde }}</span></div>
+  <div class="btns">
+    <form method="post" action="{{ url_for('concluir', aid=a.id) }}">
+      <input type="hidden" name="voltar" value="{{ voltar }}">
+      <button class="btn small block">Concluir</button>
+    </form>
+    <a class="btn red small" href="{{ url_for('cancelar_atendimento', aid=a.id, voltar=voltar) }}">Cancelar</a>
+  </div>
+</article>
+{%- endmacro %}
+
+{% macro cor_situacao(st) -%}
+{%- if st == 'Aguardando' %}var(--amber){% elif st == 'Em atendimento' %}var(--blue){% elif st == 'Concluído' %}var(--mint){% else %}#a9b7b2{% endif -%}
+{%- endmacro %}
